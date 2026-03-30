@@ -73,14 +73,6 @@
     pointer-events: none;
   }
 
-  /* ─── THREE.JS CANVAS ─────────────────────────────────────── */
-  #three-canvas {
-    position: fixed; inset: 0; z-index: 2;
-    pointer-events: none; opacity: 0;
-    transition: opacity .6s;
-  }
-  #three-canvas.show { opacity: 1; }
-
   /* ─── HUD ELEMENTS ────────────────────────────────────────── */
   .hud {
     position: fixed; z-index: 10;
@@ -185,27 +177,6 @@
   .spec-key { font-size: 11px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
   .spec-val { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); }
 
-  /* Right callout labels */
-  .callout {
-    position: absolute;
-    opacity: 0; transition: opacity .5s;
-    pointer-events: none;
-  }
-  .callout.on { opacity: 1; }
-  .callout-box {
-    background: var(--glass);
-    border: 1px solid var(--border);
-    padding: 5px 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px; letter-spacing: 3px; color: var(--accent);
-    white-space: nowrap; backdrop-filter: blur(6px);
-  }
-  .callout-line {
-    position: absolute;
-    background: var(--border);
-    pointer-events: none;
-  }
-
   /* Progress dots */
   #progress-dots {
     position: absolute;
@@ -283,20 +254,17 @@
 </head>
 <body>
 
-<!-- ── LOADING ─────────────────────────────────────────────── -->
 <div id="loading">
   <div id="loading-logo">GLOBEMASTER</div>
   <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
   <div id="loading-label">INITIALIZING SYSTEMS</div>
 </div>
 
-<!-- ── CORNER BRACKETS ────────────────────────────────────── -->
 <div class="bracket tl"></div>
 <div class="bracket tr"></div>
 <div class="bracket bl"></div>
 <div class="bracket br"></div>
 
-<!-- ── VIDEO ──────────────────────────────────────────────── -->
 <div id="video-wrap">
   <video id="bg-video" muted playsinline preload="auto">
     <source src="gemini_generated_video_B3A813E5.MP4" type="video/mp4">
@@ -304,10 +272,6 @@
   <div id="vignette"></div>
 </div>
 
-<!-- ── THREE.JS CANVAS ────────────────────────────────────── -->
-<canvas id="three-canvas"></canvas>
-
-<!-- ── HUD ────────────────────────────────────────────────── -->
 <div class="hud" id="alt-hud">
   <div id="alt-tag">ALTITUDE  ·  MSL</div>
   <div id="alt-val">35,000<span style="font-size:28px;opacity:.5"> FT</span></div>
@@ -329,18 +293,14 @@
   <div class="scroll-arrow"></div>
 </div>
 
-<!-- INCOMING label -->
 <div id="incoming"><div id="incoming-tag">◈ AIRCRAFT INCOMING ◈</div></div>
 
-<!-- approach flash -->
 <div id="approach-flash"></div>
 
-<!-- ── INFO OVERLAY ────────────────────────────────────────── -->
 <div id="info-overlay">
   <div id="section-label"><span id="section-label-text">SYSTEM OVERVIEW</span></div>
 
   <div id="spec-panel">
-    <!-- Slide 0: Overview -->
     <div class="spec-slide active" data-index="0">
       <div class="spec-tag">01 / OVERVIEW</div>
       <div class="spec-name">GLOBEMASTER III</div>
@@ -351,7 +311,6 @@
       <div class="spec-row"><span class="spec-key">Operators</span><span class="spec-val">USAF + 8 NATIONS</span></div>
       <div class="spec-row"><span class="spec-key">Units Built</span><span class="spec-val">279</span></div>
     </div>
-    <!-- Slide 1: Propulsion -->
     <div class="spec-slide" data-index="1">
       <div class="spec-tag">02 / PROPULSION</div>
       <div class="spec-name">F117-PW-100</div>
@@ -362,7 +321,6 @@
       <div class="spec-row"><span class="spec-key">Bypass Ratio</span><span class="spec-val">5.9 : 1</span></div>
       <div class="spec-row"><span class="spec-key">FADEC</span><span class="spec-val">FULL AUTHORITY</span></div>
     </div>
-    <!-- Slide 2: Dimensions -->
     <div class="spec-slide" data-index="2">
       <div class="spec-tag">03 / DIMENSIONS</div>
       <div class="spec-name">BY THE NUMBERS</div>
@@ -373,7 +331,6 @@
       <div class="spec-row"><span class="spec-key">Cargo Bay</span><span class="spec-val">88 × 18 FT</span></div>
       <div class="spec-row"><span class="spec-key">MTOW</span><span class="spec-val">585,000 LB</span></div>
     </div>
-    <!-- Slide 3: Performance -->
     <div class="spec-slide" data-index="3">
       <div class="spec-tag">04 / PERFORMANCE</div>
       <div class="spec-name">OPERATIONAL</div>
@@ -386,21 +343,6 @@
     </div>
   </div>
 
-  <!-- Callout labels positioned around plane -->
-  <div class="callout" id="c-engine" style="right:18%; top:42%;">
-    <div class="callout-box">F117-PW-100 TURBOFAN</div>
-  </div>
-  <div class="callout" id="c-wing" style="right:10%; top:58%;">
-    <div class="callout-box">SUPERCRITICAL SWEPT WING</div>
-  </div>
-  <div class="callout" id="c-fuselage" style="right:28%; top:32%;">
-    <div class="callout-box">WIDE-BODY CARGO FUSELAGE</div>
-  </div>
-  <div class="callout" id="c-tail" style="right:42%; top:68%;">
-    <div class="callout-box">T-TAIL CONFIGURATION</div>
-  </div>
-
-  <!-- Progress dots -->
   <div id="progress-dots">
     <div class="pdot on"></div>
     <div class="pdot"></div>
@@ -409,7 +351,6 @@
   </div>
 </div>
 
-<!-- ── SCROLL SCAFFOLD ─────────────────────────────────────── -->
 <div id="scroll-wrapper">
   <div id="phase-fall"></div>
   <div id="phase-approach"></div>
@@ -424,9 +365,6 @@
   </div>
 </div>
 
-<!-- ── SCRIPTS ────────────────────────────────────────────── -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 <script>
@@ -436,7 +374,6 @@ gsap.registerPlugin(ScrollTrigger);
    ELEMENTS
 ═══════════════════════════════════════════════════════════ */
 const video        = document.getElementById('bg-video');
-const canvas3      = document.getElementById('three-canvas');
 const loading      = document.getElementById('loading');
 const loadBar      = document.getElementById('loading-bar');
 const loadLabel    = document.getElementById('loading-label');
@@ -451,85 +388,12 @@ const finalContent = document.getElementById('final-content');
 const brackets     = document.querySelectorAll('.bracket');
 const specSlides   = document.querySelectorAll('.spec-slide');
 const pdots        = document.querySelectorAll('.pdot');
-const callouts     = document.querySelectorAll('.callout');
 const secLabel     = document.getElementById('section-label-text');
 const sectionLabels= ["SYSTEM OVERVIEW","PROPULSION SYSTEMS","AIRFRAME DIMENSIONS","OPERATIONAL ENVELOPE"];
 
 /* ═══════════════════════════════════════════════════════════
-   THREE.JS SETUP
+   INITIALIZATION
 ═══════════════════════════════════════════════════════════ */
-const renderer = new THREE.WebGLRenderer({ canvas: canvas3, alpha: true, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
-
-const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
-camera.position.set(0, 4, 18);
-camera.lookAt(0, 0, 0);
-
-// Lighting
-const ambient = new THREE.AmbientLight(0xd0e8ff, 1.2);
-scene.add(ambient);
-const sun = new THREE.DirectionalLight(0xffffff, 2.5);
-sun.position.set(8, 12, 6);
-scene.add(sun);
-const fill = new THREE.DirectionalLight(0x0066ff, 0.8);
-fill.position.set(-10, -4, -8);
-scene.add(fill);
-const rim = new THREE.DirectionalLight(0x00d4ff, 1.0);
-rim.position.set(0, 6, -10);
-scene.add(rim);
-
-/* ═══════════════════════════════════════════════════════════
-   PLANE MODEL
-═══════════════════════════════════════════════════════════ */
-let plane = null;
-let planeGroup = new THREE.Group();
-scene.add(planeGroup);
-// Start far away, invisible
-planeGroup.position.set(0, 0, -300);
-planeGroup.scale.setScalar(0);
-
-const loader = new THREE.GLTFLoader();
-loader.load(
-  'c17_plane_game-ready.glb',
-  (gltf) => {
-    plane = gltf.scene;
-
-    // Auto-scale to fit ~10 units
-    const box = new THREE.Box3().setFromObject(plane);
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const s = 10 / maxDim;
-    plane.scale.setScalar(s);
-
-    // Center
-    const center = box.getCenter(new THREE.Vector3());
-    plane.position.x = -center.x * s;
-    plane.position.y = -center.y * s;
-    plane.position.z = -center.z * s;
-
-    // Rotate to face camera (adjust if needed)
-    plane.rotation.y = Math.PI;
-
-    planeGroup.add(plane);
-    updateLoadBar(100, 'SYSTEMS ONLINE');
-    setTimeout(hideLoading, 600);
-  },
-  (xhr) => {
-    const pct = Math.round((xhr.loaded / xhr.total) * 90);
-    updateLoadBar(pct, 'LOADING AIRCRAFT MODEL...');
-  },
-  (err) => {
-    console.error('GLB load error:', err);
-    updateLoadBar(100, 'ERROR — CHECK MODEL PATH');
-    setTimeout(hideLoading, 1200);
-  }
-);
-
 function updateLoadBar(pct, label) {
   loadBar.style.width = pct + '%';
   loadLabel.textContent = label;
@@ -567,19 +431,6 @@ function showSlide(idx) {
   specSlides.forEach((s, i) => s.classList.toggle('active', i === idx));
   pdots.forEach((d, i) => d.classList.toggle('on', i === idx));
   if (sectionLabels[idx]) secLabel.textContent = sectionLabels[idx];
-
-  // callouts per slide
-  const calloutMap = [
-    ['c-fuselage'],
-    ['c-engine'],
-    ['c-wing', 'c-tail'],
-    ['c-engine', 'c-wing', 'c-fuselage', 'c-tail'],
-  ];
-  callouts.forEach(c => c.classList.remove('on'));
-  (calloutMap[idx] || []).forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('on');
-  });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -625,25 +476,13 @@ function initScroll() {
     onEnter: () => {
       // show incoming label
       gsap.to(incomingEl, { opacity: 1, duration: .4 });
-      canvas3.classList.add('show');
     },
     onLeaveBack: () => {
       gsap.to(incomingEl, { opacity: 0, duration: .3 });
-      canvas3.classList.remove('show');
-      gsap.to(planeGroup.position, { x:0, y:0, z:-300, duration:.5 });
-      gsap.to(planeGroup.scale, { x:0, y:0, z:0, duration:.5 });
     },
     onUpdate: (self) => {
       const p = self.progress;
-      // Fly from far to near
-      const z   = -300 + p * 270;      // -300 → -30
-      const s   = p * 1.0;             // 0 → 1 (scene-space scale)
-      const xIn = (1 - p) * -80;       // comes from left
-      const yIn = (1 - p) * 30;        // comes from slightly above
-
-      planeGroup.position.set(xIn, yIn, z);
-      planeGroup.scale.setScalar(Math.max(0.001, s));
-
+      
       // approach flash pulse
       gsap.to(approachFlash, { opacity: p * 0.4, duration: .1 });
 
@@ -665,9 +504,6 @@ function initScroll() {
       altHud.classList.remove('show');
       crosshair.classList.remove('show');
       showSlide(0);
-      // settle plane to center
-      gsap.to(planeGroup.position, { x: 6, y: -1, z: -30, duration: 1.4, ease: 'power3.out' });
-      gsap.to(planeGroup.rotation, { y: Math.PI + 0.15, duration: 1.4, ease: 'power3.out' });
     },
     onLeave: () => {
       infoOverlay.classList.remove('show');
@@ -688,11 +524,6 @@ function initScroll() {
       // Slide through 4 panels
       const idx = Math.min(3, Math.floor(self.progress * 4));
       showSlide(idx);
-
-      // Gentle idle yaw based on progress
-      if (planeGroup) {
-        planeGroup.rotation.y = Math.PI + 0.15 + Math.sin(self.progress * Math.PI * 2) * 0.08;
-      }
     }
   });
 
@@ -707,66 +538,40 @@ function initScroll() {
     },
     onUpdate: (self) => {
       const p = self.progress;
-      // Bank hard right and rocket away
-      planeGroup.rotation.z = -p * 0.7;
-      planeGroup.position.x = 6  + p * 180;
-      planeGroup.position.y = -1 + p * 80;
-      planeGroup.position.z = -30 + p * 60;
-      planeGroup.scale.setScalar(Math.max(0.001, 1 - p * 0.95));
 
-      // Resume video
+      // Resume video scrub
       setVideoTime(0.55 + p * 0.44);
       const alt = Math.round(p * 2000);
       altVal.innerHTML = fmtAlt(alt) + '<span style="font-size:28px;opacity:.5"> FT</span>';
     },
     onLeave: () => {
-      canvas3.classList.remove('show');
       altHud.classList.remove('show');
       crosshair.classList.remove('show');
       brackets.forEach(b => b.classList.remove('show'));
       finalContent.classList.add('show');
     },
     onEnterBack: () => {
-      canvas3.classList.add('show');
       finalContent.classList.remove('show');
     }
   });
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RENDER LOOP
-═══════════════════════════════════════════════════════════ */
-let t = 0;
-function animate() {
-  requestAnimationFrame(animate);
-  t += 0.012;
-
-  // Idle bob when in info phase
-  if (planeGroup && infoOverlay.classList.contains('show')) {
-    planeGroup.position.y += Math.sin(t) * 0.004;
-    planeGroup.rotation.x = Math.sin(t * 0.5) * 0.025;
-  }
-
-  renderer.render(scene, camera);
-}
-animate();
-
-/* ═══════════════════════════════════════════════════════════
-   RESIZE
-═══════════════════════════════════════════════════════════ */
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-/* ═══════════════════════════════════════════════════════════
-   VIDEO PRELOAD (ensures seekable)
+   VIDEO PRELOAD & INITIALIZATION
 ═══════════════════════════════════════════════════════════ */
 video.load();
+
+// When video has buffered enough to be scrubbable, launch experience
 video.addEventListener('canplaythrough', () => {
-  if (!plane) updateLoadBar(40, 'VIDEO READY — LOADING MODEL...');
+  updateLoadBar(100, 'SYSTEMS ONLINE');
+  setTimeout(hideLoading, 600);
 });
+
+// Fallback in case the video is already loaded before event fires
+if (video.readyState >= 3) {
+  updateLoadBar(100, 'SYSTEMS ONLINE');
+  setTimeout(hideLoading, 600);
+}
 </script>
 </body>
 </html>
