@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C-17 Globemaster III</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --navy:   #040810;
+    --accent: #00d4ff;
+    --orange: #ff6b00;
+    --white:  #dde6f0;
+    --dim:    rgba(221,230,240,0.45);
+    --glass:  rgba(0,212,255,0.07);
+    --border: rgba(0,212,255,0.22);
+  }
+
+  html { scroll-behavior: auto; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* ─── LOADING ─────────────────────────────────────────────── */
+  #loading {
+    position: fixed; inset: 0;
+    background: var(--navy);
+    z-index: 200;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 20px;
+    transition: opacity .9s ease, visibility .9s ease;
+  }
+  #loading.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+  #loading-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px; letter-spacing: 12px;
+    color: var(--white);
+  }
+  #loading-bar-wrap {
+    width: 280px; height: 1px;
+    background: rgba(0,212,255,.2);
+  }
+  #loading-bar {
+    height: 100%; width: 0%;
+    background: var(--accent);
+    transition: width .2s linear;
+  }
+  #loading-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 5px;
+    color: var(--accent); text-transform: uppercase;
+  }
+
+  /* ─── VIDEO LAYER ─────────────────────────────────────────── */
+  #video-wrap {
+    position: fixed; inset: 0; z-index: 0;
+  }
+  #bg-video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  #vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(4,8,16,.7) 100%);
+    pointer-events: none;
+  }
+
+  /* ─── THREE.JS CANVAS ─────────────────────────────────────── */
+  #three-canvas {
+    position: fixed; inset: 0; z-index: 2;
+    pointer-events: none; opacity: 0;
+    transition: opacity .6s;
+  }
+  #three-canvas.show { opacity: 1; }
+
+  /* ─── HUD ELEMENTS ────────────────────────────────────────── */
+  .hud {
+    position: fixed; z-index: 10;
+    pointer-events: none;
+    opacity: 0; transition: opacity .5s;
+  }
+  .hud.show { opacity: 1; }
+
+  /* corner brackets */
+  .bracket { position: fixed; width: 36px; height: 36px; z-index: 10; pointer-events: none; opacity: 0; transition: opacity .5s; }
+  .bracket.show { opacity: .55; }
+  .bracket.tl { top: 22px; left: 22px; border-top: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+  .bracket.tr { top: 22px; right: 22px; border-top: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+  .bracket.bl { bottom: 22px; left: 22px; border-bottom: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+  .bracket.br { bottom: 22px; right: 22px; border-bottom: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+
+  /* altitude */
+  #alt-hud {
+    top: 32px; left: 50%; transform: translateX(-50%);
+    text-align: center;
+  }
+  #alt-tag  { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 5px; color: var(--accent); margin-bottom: 4px; }
+  #alt-val  { font-family: 'Bebas Neue', sans-serif; font-size: 68px; line-height: 1; letter-spacing: 2px; }
+
+  /* crosshair */
+  #crosshair {
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 56px; height: 56px;
+  }
+  #crosshair svg { width: 100%; height: 100%; }
+
+  /* scroll cue */
+  #scroll-cue {
+    bottom: 36px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  #scroll-cue span { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 5px; color: var(--dim); }
+  .scroll-arrow { width: 1px; height: 40px; background: linear-gradient(to bottom, transparent, var(--accent)); animation: drip 1.4s ease-in-out infinite; }
+  @keyframes drip { 0%,100%{transform:scaleY(0);transform-origin:top;} 50%{transform:scaleY(1);transform-origin:top;} 51%{transform:scaleY(1);transform-origin:bottom;} 99%{transform:scaleY(0);transform-origin:bottom;} }
+
+  /* ─── APPROACH FLASH ──────────────────────────────────────── */
+  #approach-flash {
+    position: fixed; inset: 0; z-index: 8;
+    background: rgba(0,212,255,.06);
+    pointer-events: none; opacity: 0;
+  }
+
+  /* INCOMING label */
+  #incoming {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 12; pointer-events: none; opacity: 0;
+    text-align: center;
+  }
+  #incoming-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; letter-spacing: 8px; color: var(--orange);
+    animation: blink 0.7s step-end infinite;
+  }
+  @keyframes blink { 50%{opacity:0;} }
+
+  /* ─── INFO PANEL LAYER ────────────────────────────────────── */
+  #info-overlay {
+    position: fixed; inset: 0; z-index: 6;
+    pointer-events: none; opacity: 0; transition: opacity .4s;
+  }
+  #info-overlay.show { opacity: 1; }
+
+  /* Left spec panel */
+  #spec-panel {
+    position: absolute;
+    left: 5%; top: 50%;
+    transform: translateY(-50%);
+    width: 300px;
+  }
+
+  .spec-slide { display: none; }
+  .spec-slide.active { display: block; animation: slideIn .5s ease forwards; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .spec-tag  {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 5px; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .spec-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 54px; line-height: 1; letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .spec-sub {
+    font-size: 13px; letter-spacing: 3px; color: var(--dim);
+    text-transform: uppercase; margin-bottom: 24px;
+  }
+  .spec-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+  }
+  .spec-key { font-size: 11px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+  .spec-val { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); }
+
+  /* Right callout labels */
+  .callout {
+    position: absolute;
+    opacity: 0; transition: opacity .5s;
+    pointer-events: none;
+  }
+  .callout.on { opacity: 1; }
+  .callout-box {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 3px; color: var(--accent);
+    white-space: nowrap; backdrop-filter: blur(6px);
+  }
+  .callout-line {
+    position: absolute;
+    background: var(--border);
+    pointer-events: none;
+  }
+
+  /* Progress dots */
+  #progress-dots {
+    position: absolute;
+    right: 5%; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .pdot {
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1px solid var(--accent); background: transparent;
+    transition: background .3s, transform .3s;
+  }
+  .pdot.on { background: var(--accent); transform: scale(1.4); }
+
+  /* section label top center */
+  #section-label {
+    position: absolute; top: 28px; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+  #section-label span {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px; letter-spacing: 6px; color: var(--dim); text-transform: uppercase;
+  }
+
+  /* ─── SCROLL SCAFFOLD ─────────────────────────────────────── */
+  #scroll-wrapper { position: relative; z-index: 3; }
+  #phase-fall     { height: 300vh; }
+  #phase-approach { height: 120vh; }
+  #phase-info     { height: 500vh; }
+  #phase-exit     { height: 120vh; }
+  #phase-final    { height: 100vh; display:flex; align-items:center; justify-content:center; }
+
+  /* ─── FINAL SECTION ───────────────────────────────────────── */
+  #final-content {
+    text-align: center; opacity: 0;
+    transition: opacity 1s ease;
+  }
+  #final-content.show { opacity: 1; }
+  #final-content h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px,10vw,130px); letter-spacing: 10px; line-height: 1;
+    background: linear-gradient(135deg, var(--white) 30%, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  #final-content p {
+    font-size: 12px; letter-spacing: 7px; color: var(--dim);
+    text-transform: uppercase; margin-top: 14px;
+  }
+  #final-content a {
+    display: inline-block; margin-top: 40px;
+    padding: 15px 52px;
+    border: 1px solid var(--accent); color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; letter-spacing: 5px; text-transform: uppercase;
+    text-decoration: none; position: relative; overflow: hidden;
+    transition: color .35s;
+  }
+  #final-content a::before {
+    content:''; position:absolute; inset:0;
+    background: var(--accent); transform: translateX(-101%);
+    transition: transform .35s ease;
+  }
+  #final-content a:hover { color: var(--navy); }
+  #final-content a:hover::before { transform: translateX(0); }
+  #final-content a span { position: relative; }
+
+  /* scanlines */
+  body::after {
+    content:''; position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.04) 3px, rgba(0,0,0,.04) 4px);
+    pointer-events: none; z-index: 99;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOADING ─────────────────────────────────────────────── -->
+<div id="loading">
+  <div id="loading-logo">GLOBEMASTER</div>
+  <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  <div id="loading-label">INITIALIZING SYSTEMS</div>
+</div>
+
+<!-- ── CORNER BRACKETS ────────────────────────────────────── -->
+<div class="bracket tl"></div>
+<div class="bracket tr"></div>
+<div class="bracket bl"></div>
+<div class="bracket br"></div>
+
+<!-- ── VIDEO ──────────────────────────────────────────────── -->
+<div id="video-wrap">
+  <video id="bg-video" muted playsinline preload="auto">
+    <source src="gemini_generated_video_B3A813E5.MP4" type="video/mp4">
+  </video>
+  <div id="vignette"></div>
+</div>
+
+<!-- ── THREE.JS CANVAS ────────────────────────────────────── -->
+<canvas id="three-canvas"></canvas>
+
+<!-- ── HUD ────────────────────────────────────────────────── -->
+<div class="hud" id="alt-hud">
+  <div id="alt-tag">ALTITUDE  ·  MSL</div>
+  <div id="alt-val">35,000<span style="font-size:28px;opacity:.5"> FT</span></div>
+</div>
+
+<div class="hud" id="crosshair">
+  <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="28" cy="28" r="10" stroke="#00d4ff" stroke-width=".8" opacity=".6"/>
+    <line x1="28" y1="0"  x2="28" y2="16" stroke="#00d4ff" stroke-width=".8" opacity=".6"/>
+    <line x1="28" y1="40" x2="28" y2="56" stroke="#00d4ff" stroke-width=".8" opacity=".6"/>
+    <line x1="0"  y1="28" x2="16" y2="28" stroke="#00d4ff" stroke-width=".8" opacity=".6"/>
+    <line x1="40" y1="28" x2="56" y2="28" stroke="#00d4ff" stroke-width=".8" opacity=".6"/>
+    <circle cx="28" cy="28" r="1.5" fill="#00d4ff" opacity=".8"/>
+  </svg>
+</div>
+
+<div class="hud show" id="scroll-cue">
+  <span>SCROLL TO DESCEND</span>
+  <div class="scroll-arrow"></div>
+</div>
+
+<!-- INCOMING label -->
+<div id="incoming"><div id="incoming-tag">◈ AIRCRAFT INCOMING ◈</div></div>
+
+<!-- approach flash -->
+<div id="approach-flash"></div>
+
+<!-- ── INFO OVERLAY ────────────────────────────────────────── -->
+<div id="info-overlay">
+  <div id="section-label"><span id="section-label-text">SYSTEM OVERVIEW</span></div>
+
+  <div id="spec-panel">
+    <!-- Slide 0: Overview -->
+    <div class="spec-slide active" data-index="0">
+      <div class="spec-tag">01 / OVERVIEW</div>
+      <div class="spec-name">GLOBEMASTER III</div>
+      <div class="spec-sub">Boeing C-17 · Strategic Airlifter</div>
+      <div class="spec-row"><span class="spec-key">Manufacturer</span><span class="spec-val">BOEING</span></div>
+      <div class="spec-row"><span class="spec-key">First Flight</span><span class="spec-val">09.15.1991</span></div>
+      <div class="spec-row"><span class="spec-key">Role</span><span class="spec-val">STRATEGIC / TACTICAL</span></div>
+      <div class="spec-row"><span class="spec-key">Operators</span><span class="spec-val">USAF + 8 NATIONS</span></div>
+      <div class="spec-row"><span class="spec-key">Units Built</span><span class="spec-val">279</span></div>
+    </div>
+    <!-- Slide 1: Propulsion -->
+    <div class="spec-slide" data-index="1">
+      <div class="spec-tag">02 / PROPULSION</div>
+      <div class="spec-name">F117-PW-100</div>
+      <div class="spec-sub">Pratt & Whitney · 4-Engine Turbofan</div>
+      <div class="spec-row"><span class="spec-key">Engines</span><span class="spec-val">4× TURBOFAN</span></div>
+      <div class="spec-row"><span class="spec-key">Thrust Each</span><span class="spec-val">40,440 LBF</span></div>
+      <div class="spec-row"><span class="spec-key">Total Thrust</span><span class="spec-val">161,760 LBF</span></div>
+      <div class="spec-row"><span class="spec-key">Bypass Ratio</span><span class="spec-val">5.9 : 1</span></div>
+      <div class="spec-row"><span class="spec-key">FADEC</span><span class="spec-val">FULL AUTHORITY</span></div>
+    </div>
+    <!-- Slide 2: Dimensions -->
+    <div class="spec-slide" data-index="2">
+      <div class="spec-tag">03 / DIMENSIONS</div>
+      <div class="spec-name">BY THE NUMBERS</div>
+      <div class="spec-sub">Structure · Airframe Specifications</div>
+      <div class="spec-row"><span class="spec-key">Wingspan</span><span class="spec-val">169 FT 10 IN</span></div>
+      <div class="spec-row"><span class="spec-key">Length</span><span class="spec-val">174 FT 0 IN</span></div>
+      <div class="spec-row"><span class="spec-key">Height</span><span class="spec-val">55 FT 1 IN</span></div>
+      <div class="spec-row"><span class="spec-key">Cargo Bay</span><span class="spec-val">88 × 18 FT</span></div>
+      <div class="spec-row"><span class="spec-key">MTOW</span><span class="spec-val">585,000 LB</span></div>
+    </div>
+    <!-- Slide 3: Performance -->
+    <div class="spec-slide" data-index="3">
+      <div class="spec-tag">04 / PERFORMANCE</div>
+      <div class="spec-name">OPERATIONAL</div>
+      <div class="spec-sub">Envelope · Mission Capability</div>
+      <div class="spec-row"><span class="spec-key">Max Speed</span><span class="spec-val">MACH 0.77</span></div>
+      <div class="spec-row"><span class="spec-key">Range</span><span class="spec-val">2,420 NMI</span></div>
+      <div class="spec-row"><span class="spec-key">Service Ceil.</span><span class="spec-val">45,000 FT</span></div>
+      <div class="spec-row"><span class="spec-key">Max Payload</span><span class="spec-val">170,900 LB</span></div>
+      <div class="spec-row"><span class="spec-key">Crew</span><span class="spec-val">3 MEMBERS</span></div>
+    </div>
+  </div>
+
+  <!-- Callout labels positioned around plane -->
+  <div class="callout" id="c-engine" style="right:18%; top:42%;">
+    <div class="callout-box">F117-PW-100 TURBOFAN</div>
+  </div>
+  <div class="callout" id="c-wing" style="right:10%; top:58%;">
+    <div class="callout-box">SUPERCRITICAL SWEPT WING</div>
+  </div>
+  <div class="callout" id="c-fuselage" style="right:28%; top:32%;">
+    <div class="callout-box">WIDE-BODY CARGO FUSELAGE</div>
+  </div>
+  <div class="callout" id="c-tail" style="right:42%; top:68%;">
+    <div class="callout-box">T-TAIL CONFIGURATION</div>
+  </div>
+
+  <!-- Progress dots -->
+  <div id="progress-dots">
+    <div class="pdot on"></div>
+    <div class="pdot"></div>
+    <div class="pdot"></div>
+    <div class="pdot"></div>
+  </div>
+</div>
+
+<!-- ── SCROLL SCAFFOLD ─────────────────────────────────────── -->
+<div id="scroll-wrapper">
+  <div id="phase-fall"></div>
+  <div id="phase-approach"></div>
+  <div id="phase-info"></div>
+  <div id="phase-exit"></div>
+  <div id="phase-final">
+    <div id="final-content">
+      <h1>GLOBEMASTER III</h1>
+      <p>The backbone of strategic airlift · C-17 · Boeing Defense</p>
+      <a href="#"><span>EXPLORE FLEET</span></a>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+/* ═══════════════════════════════════════════════════════════
+   ELEMENTS
+═══════════════════════════════════════════════════════════ */
+const video        = document.getElementById('bg-video');
+const canvas3      = document.getElementById('three-canvas');
+const loading      = document.getElementById('loading');
+const loadBar      = document.getElementById('loading-bar');
+const loadLabel    = document.getElementById('loading-label');
+const altHud       = document.getElementById('alt-hud');
+const altVal       = document.getElementById('alt-val');
+const crosshair    = document.getElementById('crosshair');
+const scrollCue    = document.getElementById('scroll-cue');
+const infoOverlay  = document.getElementById('info-overlay');
+const incomingEl   = document.getElementById('incoming');
+const approachFlash= document.getElementById('approach-flash');
+const finalContent = document.getElementById('final-content');
+const brackets     = document.querySelectorAll('.bracket');
+const specSlides   = document.querySelectorAll('.spec-slide');
+const pdots        = document.querySelectorAll('.pdot');
+const callouts     = document.querySelectorAll('.callout');
+const secLabel     = document.getElementById('section-label-text');
+const sectionLabels= ["SYSTEM OVERVIEW","PROPULSION SYSTEMS","AIRFRAME DIMENSIONS","OPERATIONAL ENVELOPE"];
+
+/* ═══════════════════════════════════════════════════════════
+   THREE.JS SETUP
+═══════════════════════════════════════════════════════════ */
+const renderer = new THREE.WebGLRenderer({ canvas: canvas3, alpha: true, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(0, 4, 18);
+camera.lookAt(0, 0, 0);
+
+// Lighting
+const ambient = new THREE.AmbientLight(0xd0e8ff, 1.2);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+sun.position.set(8, 12, 6);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x0066ff, 0.8);
+fill.position.set(-10, -4, -8);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0x00d4ff, 1.0);
+rim.position.set(0, 6, -10);
+scene.add(rim);
+
+/* ═══════════════════════════════════════════════════════════
+   PLANE MODEL
+═══════════════════════════════════════════════════════════ */
+let plane = null;
+let planeGroup = new THREE.Group();
+scene.add(planeGroup);
+// Start far away, invisible
+planeGroup.position.set(0, 0, -300);
+planeGroup.scale.setScalar(0);
+
+const loader = new THREE.GLTFLoader();
+loader.load(
+  'c17_plane_game-ready.glb',
+  (gltf) => {
+    plane = gltf.scene;
+
+    // Auto-scale to fit ~10 units
+    const box = new THREE.Box3().setFromObject(plane);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const s = 10 / maxDim;
+    plane.scale.setScalar(s);
+
+    // Center
+    const center = box.getCenter(new THREE.Vector3());
+    plane.position.x = -center.x * s;
+    plane.position.y = -center.y * s;
+    plane.position.z = -center.z * s;
+
+    // Rotate to face camera (adjust if needed)
+    plane.rotation.y = Math.PI;
+
+    planeGroup.add(plane);
+    updateLoadBar(100, 'SYSTEMS ONLINE');
+    setTimeout(hideLoading, 600);
+  },
+  (xhr) => {
+    const pct = Math.round((xhr.loaded / xhr.total) * 90);
+    updateLoadBar(pct, 'LOADING AIRCRAFT MODEL...');
+  },
+  (err) => {
+    console.error('GLB load error:', err);
+    updateLoadBar(100, 'ERROR — CHECK MODEL PATH');
+    setTimeout(hideLoading, 1200);
+  }
+);
+
+function updateLoadBar(pct, label) {
+  loadBar.style.width = pct + '%';
+  loadLabel.textContent = label;
+}
+
+function hideLoading() {
+  loading.classList.add('gone');
+  initScroll();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VIDEO SCRUB HELPER
+═══════════════════════════════════════════════════════════ */
+video.addEventListener('loadedmetadata', () => {});
+
+function setVideoTime(progress) {
+  if (!video.duration || isNaN(video.duration)) return;
+  video.currentTime = Math.min(progress, 0.99) * video.duration;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ALTITUDE COUNTER
+═══════════════════════════════════════════════════════════ */
+function fmtAlt(n) {
+  return Math.round(n).toLocaleString();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INFO PANEL SWITCHER
+═══════════════════════════════════════════════════════════ */
+let currentSlide = -1;
+function showSlide(idx) {
+  if (idx === currentSlide) return;
+  currentSlide = idx;
+  specSlides.forEach((s, i) => s.classList.toggle('active', i === idx));
+  pdots.forEach((d, i) => d.classList.toggle('on', i === idx));
+  if (sectionLabels[idx]) secLabel.textContent = sectionLabels[idx];
+
+  // callouts per slide
+  const calloutMap = [
+    ['c-fuselage'],
+    ['c-engine'],
+    ['c-wing', 'c-tail'],
+    ['c-engine', 'c-wing', 'c-fuselage', 'c-tail'],
+  ];
+  callouts.forEach(c => c.classList.remove('on'));
+  (calloutMap[idx] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('on');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLL TRIGGERS
+═══════════════════════════════════════════════════════════ */
+function initScroll() {
+  /* ── HUD show on first scroll ──────────────────────── */
+  ScrollTrigger.create({
+    trigger: '#phase-fall',
+    start: 'top+=1 top',
+    onEnter: () => {
+      scrollCue.classList.remove('show');
+      altHud.classList.add('show');
+      crosshair.classList.add('show');
+      brackets.forEach(b => b.classList.add('show'));
+    },
+    onLeaveBack: () => {
+      scrollCue.classList.add('show');
+      altHud.classList.remove('show');
+      crosshair.classList.remove('show');
+    }
+  });
+
+  /* ── PHASE 1: Video scrub + altitude counter ───────── */
+  ScrollTrigger.create({
+    trigger: '#phase-fall',
+    start: 'top top',
+    end: 'bottom top',
+    scrub: true,
+    onUpdate: (self) => {
+      setVideoTime(self.progress * 0.55); // first 55% of video in fall
+      const alt = Math.round(35000 - self.progress * 25000);
+      altVal.innerHTML = fmtAlt(alt) + '<span style="font-size:28px;opacity:.5"> FT</span>';
+    }
+  });
+
+  /* ── PHASE 2: Plane approaches ─────────────────────── */
+  ScrollTrigger.create({
+    trigger: '#phase-approach',
+    start: 'top bottom',
+    end: 'bottom top',
+    scrub: 1.2,
+    onEnter: () => {
+      // show incoming label
+      gsap.to(incomingEl, { opacity: 1, duration: .4 });
+      canvas3.classList.add('show');
+    },
+    onLeaveBack: () => {
+      gsap.to(incomingEl, { opacity: 0, duration: .3 });
+      canvas3.classList.remove('show');
+      gsap.to(planeGroup.position, { x:0, y:0, z:-300, duration:.5 });
+      gsap.to(planeGroup.scale, { x:0, y:0, z:0, duration:.5 });
+    },
+    onUpdate: (self) => {
+      const p = self.progress;
+      // Fly from far to near
+      const z   = -300 + p * 270;      // -300 → -30
+      const s   = p * 1.0;             // 0 → 1 (scene-space scale)
+      const xIn = (1 - p) * -80;       // comes from left
+      const yIn = (1 - p) * 30;        // comes from slightly above
+
+      planeGroup.position.set(xIn, yIn, z);
+      planeGroup.scale.setScalar(Math.max(0.001, s));
+
+      // approach flash pulse
+      gsap.to(approachFlash, { opacity: p * 0.4, duration: .1 });
+
+      // altitude keeps dropping
+      const alt = Math.round(10000 - p * 5000);
+      altVal.innerHTML = fmtAlt(Math.max(alt,0)) + '<span style="font-size:28px;opacity:.5"> FT</span>';
+    }
+  });
+
+  /* ── PHASE 3: Info locked ──────────────────────────── */
+  ScrollTrigger.create({
+    trigger: '#phase-info',
+    start: 'top top',
+    end: 'bottom bottom',
+    onEnter: () => {
+      gsap.to(incomingEl, { opacity: 0, duration: .3 });
+      gsap.to(approachFlash, { opacity: 0, duration: .3 });
+      infoOverlay.classList.add('show');
+      altHud.classList.remove('show');
+      crosshair.classList.remove('show');
+      showSlide(0);
+      // settle plane to center
+      gsap.to(planeGroup.position, { x: 6, y: -1, z: -30, duration: 1.4, ease: 'power3.out' });
+      gsap.to(planeGroup.rotation, { y: Math.PI + 0.15, duration: 1.4, ease: 'power3.out' });
+    },
+    onLeave: () => {
+      infoOverlay.classList.remove('show');
+      altHud.classList.add('show');
+      crosshair.classList.add('show');
+    },
+    onEnterBack: () => {
+      infoOverlay.classList.add('show');
+      altHud.classList.remove('show');
+      crosshair.classList.remove('show');
+    },
+    onLeaveBack: () => {
+      infoOverlay.classList.remove('show');
+      altHud.classList.add('show');
+      crosshair.classList.add('show');
+    },
+    onUpdate: (self) => {
+      // Slide through 4 panels
+      const idx = Math.min(3, Math.floor(self.progress * 4));
+      showSlide(idx);
+
+      // Gentle idle yaw based on progress
+      if (planeGroup) {
+        planeGroup.rotation.y = Math.PI + 0.15 + Math.sin(self.progress * Math.PI * 2) * 0.08;
+      }
+    }
+  });
+
+  /* ── PHASE 4: Plane exits ──────────────────────────── */
+  ScrollTrigger.create({
+    trigger: '#phase-exit',
+    start: 'top top',
+    end: 'bottom top',
+    scrub: 1,
+    onEnter: () => {
+      infoOverlay.classList.remove('show');
+    },
+    onUpdate: (self) => {
+      const p = self.progress;
+      // Bank hard right and rocket away
+      planeGroup.rotation.z = -p * 0.7;
+      planeGroup.position.x = 6  + p * 180;
+      planeGroup.position.y = -1 + p * 80;
+      planeGroup.position.z = -30 + p * 60;
+      planeGroup.scale.setScalar(Math.max(0.001, 1 - p * 0.95));
+
+      // Resume video
+      setVideoTime(0.55 + p * 0.44);
+      const alt = Math.round(p * 2000);
+      altVal.innerHTML = fmtAlt(alt) + '<span style="font-size:28px;opacity:.5"> FT</span>';
+    },
+    onLeave: () => {
+      canvas3.classList.remove('show');
+      altHud.classList.remove('show');
+      crosshair.classList.remove('show');
+      brackets.forEach(b => b.classList.remove('show'));
+      finalContent.classList.add('show');
+    },
+    onEnterBack: () => {
+      canvas3.classList.add('show');
+      finalContent.classList.remove('show');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER LOOP
+═══════════════════════════════════════════════════════════ */
+let t = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.012;
+
+  // Idle bob when in info phase
+  if (planeGroup && infoOverlay.classList.contains('show')) {
+    planeGroup.position.y += Math.sin(t) * 0.004;
+    planeGroup.rotation.x = Math.sin(t * 0.5) * 0.025;
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+/* ═══════════════════════════════════════════════════════════
+   RESIZE
+═══════════════════════════════════════════════════════════ */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   VIDEO PRELOAD (ensures seekable)
+═══════════════════════════════════════════════════════════ */
+video.load();
+video.addEventListener('canplaythrough', () => {
+  if (!plane) updateLoadBar(40, 'VIDEO READY — LOADING MODEL...');
+});
+</script>
+</body>
+</html>
